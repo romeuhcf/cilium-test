@@ -1,0 +1,114 @@
+---
+# Allow frontend to call backend (any version)
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: frontend-to-backend
+  namespace: demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: frontend
+  egress:
+    # Allow reaching backend pods
+    - toEndpoints:
+        - matchLabels:
+            app: backend
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Allow DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+---
+# Allow backend-v1 to reach downstream-v1 ONLY
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: backend-v1-to-downstream-v1
+  namespace: demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+      version: v1
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app: downstream
+            version: v1
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Allow DNS
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+---
+# Allow backend-v2 to reach downstream-v2 ONLY
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: backend-v2-to-downstream-v2
+  namespace: demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+      version: v2
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app: downstream
+            version: v2
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Allow DNS
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+---
+# Allow downstream pods to receive from backend pods (ingress)
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: downstream-ingress
+  namespace: demo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: downstream
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app: backend
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
